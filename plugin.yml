@@ -1,0 +1,32 @@
+name: Mala_Altar
+main: ma.main.Mala_Altar
+version: 1.18
+api-version: 1.18
+author: Malaia_Garnet
+description: Adds Arena Style Room
+depend: [Laylia_Core_API, Mala_MMOSkills, Mala_Advancement, MythicMobs, MMOItems]
+commands:
+   animal_check:
+      description: check animal count nearby 30/60/100
+      usage: /animal_check
+      default: true   
+   mala_altar:
+      description: start create altar
+      usage: /mala_altar create/endspawn
+      default: true   
+   altar_playcount:
+      description: check player play count
+      usage: /mala_altar_playcount playername
+      default: true   
+   mala_altar_init:
+      description: initialize altar play count
+      usage: /mala_altar_init playername
+      default: true   
+   mala_altar_reload_mob:
+      description: reload mob setting (only set)
+      usage: /mala_altar_reload_mob
+      default: true   
+permissions:
+   ma.altar.test:
+      description: just for test
+      default: false
