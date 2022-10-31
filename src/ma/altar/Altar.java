@@ -57,6 +57,10 @@ public class Altar
 	public Scoreboard m_HP_Board;
 	Objective obj;
 	
+	// 기믹
+	boolean m_SpawnRandomized = false;
+	boolean m_SpawnStronglyRandomized = false;
+	
 	public Altar()
 	{
 		m_SpawnPoints = new ArrayList<Vector>();
@@ -517,6 +521,9 @@ public class Altar
 	public void Start_Gimmicks()
 	{
 		ArrayList<String> gimmick_list = m_CurrentWaveData.m_Gimmicks;
+
+		m_SpawnRandomized = false;
+		m_SpawnStronglyRandomized = false;
 		
 		if (gimmick_list == null || gimmick_list.size() == 0)
 			return;
@@ -557,6 +564,15 @@ public class Altar
 			// 특정 버프를 추가 (적들)
 			case "ADD_BUFF_ENEMY":
 				Altar_Gimmicks.Add_Buff_Enemies(m_Enemies, params.get(1), params.get(2), params.get(3));
+				break;
+			// 스폰 포인트 랜덤화
+			case "RANDOMIZE":
+				m_SpawnRandomized = true;
+				break;
+			// 스폰 포인트 랜덤화(개체 단위)
+			case "RANDOMIZE_STRONG":
+				m_SpawnRandomized = true;
+				m_SpawnStronglyRandomized = true;
 				break;
 			}
 		}
@@ -651,13 +667,21 @@ public class Altar
 		for (String order : orders)
 		{
 			StringTokenizer token_tok = new StringTokenizer(order, ":");
+			// 스폰 지점 인덱스
 			int index = Integer.parseInt(token_tok.nextToken());
+			if (m_SpawnRandomized) // 기믹으로 인한 랜덤화
+				index = Get_Randomized_Spawn_Point_Index();
+			// 대기 시간
 			double wait_time = Double.parseDouble(token_tok.nextToken());
+			// 미띡 몹 여부
 			boolean is_mythic = token_tok.nextToken().equals("mythicmobs");
+			// 몹 이름
 			String mob_name = token_tok.nextToken();
 			int count = Integer.parseInt(token_tok.nextToken());
 			for (int i = 0; i < count; i++)
 			{
+				if (m_SpawnStronglyRandomized) // 기믹으로 인한 랜덤화(개체 단위)
+					index = Get_Randomized_Spawn_Point_Index();
 				Location loc = new Location(Bukkit.getWorld(m_World),
 						m_SpawnPoints.get(index).getX(), m_SpawnPoints.get(index).getY(), m_SpawnPoints.get(index).getZ());
 				Enemy_Order eo = new Enemy_Order(is_mythic, mob_name, loc, wait_time);
@@ -760,5 +784,10 @@ public class Altar
 		
 		Bukkit.broadcastMessage(m_ID + "의 도전이 가능해졌습니다.");
 		Initialize();
+	}
+	
+	protected int Get_Randomized_Spawn_Point_Index()
+	{
+		return (int)(Math.random() * m_SpawnPoints.size());
 	}
 }
