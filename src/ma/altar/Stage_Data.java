@@ -20,6 +20,7 @@ public class Stage_Data
 	public String m_FileName;
 	FileConfiguration file = null;
 	
+	public int m_MinPlayers = 1;
 	public int m_MaxPlayers = 3;
 	public boolean is_NoFly = false;
 	public boolean is_NoElytra = false;
@@ -100,6 +101,10 @@ public class Stage_Data
 			
 			switch (type)
 			{
+			case "MIN_PLAYER":
+			case "MIN_PLAYERS":
+				m_MinPlayers = Integer.parseInt(params.get(0));
+				break;
 			case "MAX_PLAYER":
 			case "MAX_PLAYERS":
 				m_MaxPlayers = Integer.parseInt(params.get(0));

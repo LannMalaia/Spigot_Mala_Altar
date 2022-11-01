@@ -217,10 +217,18 @@ public class Altar
 			}
 		}
 		// 인원 체크
-		if (m_Players.size() > m_CurrentStageData.m_MaxPlayers)
+		if (_starter.hasPermission("*"))
 		{
-			BroadcastMSG("§c최대 " + m_CurrentStageData.m_MaxPlayers + "명까지만 입장할 수 있습니다.");
-			return;
+			if (m_Players.size() > m_CurrentStageData.m_MaxPlayers)
+			{
+				BroadcastMSG("§c최대 " + m_CurrentStageData.m_MaxPlayers + "명까지만 입장할 수 있습니다.");
+				return;
+			}
+			if (m_Players.size() < m_CurrentStageData.m_MinPlayers)
+			{
+				BroadcastMSG("§c최소 " + m_CurrentStageData.m_MinPlayers + "명이 참여해야 입장할 수 있습니다.");
+				return;
+			}
 		}
 		if (m_Players.size() == 0)
 			return;
