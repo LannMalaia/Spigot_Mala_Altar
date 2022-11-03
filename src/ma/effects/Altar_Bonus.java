@@ -119,8 +119,9 @@ public class Altar_Bonus
 		for (Player player : players)
 		{
 			PlayerData p_data = MMOCore.plugin.dataProvider.getDataManager().get(player);
-			p_data.giveExperience(exp_amount, EXPSource.SOURCE);
-			player.sendMessage("§f§l- §a§l경험치 " + exp_amount + " 획득");
+			p_data.giveExperience(exp_amount * 2, EXPSource.SOURCE);
+			player.sendMessage("§d§l[ 11월의 이벤트 :: 경험치 2배 ]");
+			player.sendMessage("§f§l- §a§l경험치 " + (exp_amount * 2) + " 획득");
 		}
 	}
 	public static void Give_FullPlayer_EXP(ArrayList<Player> players, String amount)
@@ -130,8 +131,9 @@ public class Altar_Bonus
 		for (Player player : players)
 		{
 			PlayerData p_data = MMOCore.plugin.dataProvider.getDataManager().get(player);
-			p_data.giveExperience(exp_amount, EXPSource.SOURCE);
-			player.sendMessage("§f§l- §a§l전원 참여 보너스 경험치 " + exp_amount + " 획득");
+			p_data.giveExperience(exp_amount * 2, EXPSource.SOURCE);
+			player.sendMessage("§d§l[ 11월의 이벤트 :: 경험치 2배 ]");
+			player.sendMessage("§f§l- §a§l전원 참여 보너스 경험치 " + (exp_amount * 2) + " 획득");
 		}
 	}
 	public static void Give_Item_Players(ArrayList<Player> players, ArrayList<String> params)

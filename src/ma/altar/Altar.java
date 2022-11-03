@@ -217,7 +217,7 @@ public class Altar
 			}
 		}
 		// 인원 체크
-		if (_starter.hasPermission("*"))
+		if (!_starter.hasPermission("*"))
 		{
 			if (m_Players.size() > m_CurrentStageData.m_MaxPlayers)
 			{
@@ -266,8 +266,9 @@ public class Altar
 
 		if (ticket.getAmount() > 1)
 		{
-			ticket.setAmount(ticket.getAmount() - 1);
-			_starter.getInventory().setItemInMainHand(ticket);
+			_starter.sendMessage("§d§l[ 11월의 이벤트 :: 통행증 소모 없음 ]");
+			// ticket.setAmount(ticket.getAmount() - 1);
+			// _starter.getInventory().setItemInMainHand(ticket);
 		}
 		else
 		{
