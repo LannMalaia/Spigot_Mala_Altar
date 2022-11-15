@@ -123,7 +123,7 @@ public class Altar_Manager implements Runnable
 			count = m_User_PlayCount.get(_player.getUniqueId());
 		return count;
 	}
-	public void Player_Count_Up(Player _player)
+	public void Player_Count_Up(Player _player, int _count)
 	{
 		if (_player.hasPermission("*"))
 			return;
@@ -131,11 +131,11 @@ public class Altar_Manager implements Runnable
 		if (m_User_PlayCount.containsKey(_player.getUniqueId()))
 		{
 			Integer count = m_User_PlayCount.get(_player.getUniqueId());
-			m_User_PlayCount.put(_player.getUniqueId(), count + 1);
+			m_User_PlayCount.put(_player.getUniqueId(), count + _count);
 		}
 		else
 		{
-			m_User_PlayCount.put(_player.getUniqueId(), 1);
+			m_User_PlayCount.put(_player.getUniqueId(), _count);
 		}
 	}
 	public void Player_Erase_Count(Player _player)

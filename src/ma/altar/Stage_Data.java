@@ -24,7 +24,9 @@ public class Stage_Data
 	public int m_MaxPlayers = 3;
 	public boolean is_NoFly = false;
 	public boolean is_NoElytra = false;
+	public boolean is_NoItem = false;
 	public boolean can_GetAdvancement = false;
+	public boolean is_SuperLevel = false;
 	public int m_PlayerNoDamageTicks = 10;
 	public int m_Need_Level = 0;
 	// public int m_Restricted_Level = 0;
@@ -118,8 +120,14 @@ public class Stage_Data
 			case "RESTRICT_ELYTRA":
 				is_NoElytra = true;
 				break;
+			case "NO_ITEMDROP":
+				is_NoItem = true;
+				break;
 			case "CAN_GET_ADVANCEMENT":
 				can_GetAdvancement = true;
+				break;
+			case "SUPER_LEVEL":
+				is_SuperLevel = true;
 				break;
 			case "NO_DAMAGE_TICKS":
 				m_PlayerNoDamageTicks = Integer.parseInt(params.get(0));

@@ -45,6 +45,7 @@ public class Altar
 	// 실시간
 	String m_Challengers_Name; // 도전자 리스트
 	ALTAR_STATE m_State = ALTAR_STATE.STANDBY; // 진행중?
+	public ArrayList<Player> m_StartPlayers; // 시작자들
 	public ArrayList<Player> m_Players; // 참여자들
 	public ArrayList<Enemy_Order> m_Enemies; // 몹들
 	public Stage_Data m_CurrentStageData; // 이번 도전에서 진행되는 스테이지 데이터
@@ -162,6 +163,7 @@ public class Altar
 	{
 		m_Challengers_Name = "";
 		m_State = ALTAR_STATE.STANDBY;
+		m_StartPlayers = new ArrayList<Player>();
 		m_Players = new ArrayList<Player>();
 		m_Enemies = new ArrayList<Enemy_Order>();
 		m_Round = 1;
@@ -216,6 +218,7 @@ public class Altar
 					m_Players.add(player);
 			}
 		}
+		m_StartPlayers.addAll(m_Players);
 		// 인원 체크
 		if (!_starter.hasPermission("*"))
 		{
@@ -273,7 +276,8 @@ public class Altar
 		else
 		{
 			// 아무것도 없는지 체크할 수 있는 유일한 구간
-			_starter.getInventory().setItemInMainHand(null);
+			_starter.sendMessage("§d§l[ 11월의 이벤트 :: 통행증 소모 없음 ]");
+			// _starter.getInventory().setItemInMainHand(null);
 			if (m_Players.size() == 1 && m_CurrentStageData.can_GetAdvancement)
 			{
 				adv_Solo_NoInvPlay = _starter.getInventory().isEmpty();
@@ -289,7 +293,10 @@ public class Altar
 				player.teleport(_starter.getLocation(), TeleportCause.PLUGIN);
 
 			player.setScoreboard(m_HP_Board);
-			Altar_Manager.Instance.Player_Count_Up(player);
+			if (m_CurrentStageData.is_SuperLevel)
+				Altar_Manager.Instance.Player_Count_Up(player, 4);
+			else
+				Altar_Manager.Instance.Player_Count_Up(player, 1);
 		}
 		for (Player player : m_Players)
 		{
@@ -693,7 +700,7 @@ public class Altar
 					index = Get_Randomized_Spawn_Point_Index();
 				Location loc = new Location(Bukkit.getWorld(m_World),
 						m_SpawnPoints.get(index).getX(), m_SpawnPoints.get(index).getY(), m_SpawnPoints.get(index).getZ());
-				Enemy_Order eo = new Enemy_Order(is_mythic, mob_name, loc, wait_time);
+				Enemy_Order eo = new Enemy_Order(is_mythic, mob_name, loc, wait_time, m_CurrentStageData.is_NoItem);
 				m_Enemies.add(eo);
 				Bukkit.getScheduler().runTask(Mala_Altar.plugin, eo);
 			}
@@ -733,10 +740,15 @@ public class Altar
 			Bukkit.broadcastMessage(m_Challengers_Name + "님이 " + altar_name + " §f도전에 성공하셨습니다.");
 			BroadcastTitle("§b§l■ 올 클리어 ■", altar_name + "§f도전에 성공했습니다!", 20, 200, 40);
 
-			for (Player player : m_Players)
+			if (m_CurrentStageData.can_GetAdvancement)
 			{
-				if (adv_Solo_NoInvPlay)
-					MalaNormal_Advancement.grantADV("malanormal", "altarnoarmor", m_Players.get(0));
+				for (Player player : m_Players)
+				{
+					if (adv_Solo_NoInvPlay)
+						MalaNormal_Advancement.grantADV("malanormal", "altarnoarmor", player);
+					if (m_CurrentStageData.is_SuperLevel)
+						MalaNormal_Advancement.grantADV("malanormal", "altarsuperlevel", player);
+				}
 			}
 			
 			if (m_CurrentStageData.m_ClearTeleport != null)
@@ -752,7 +764,7 @@ public class Altar
 			
 			if (m_Round == 1)
 			{
-				for (Player player : m_Players)
+				for (Player player : m_StartPlayers)
 					 MalaNormal_Advancement.grantADV("malanormal", "altarfirstdeath", player);
 			}
 			

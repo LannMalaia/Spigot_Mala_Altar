@@ -17,6 +17,7 @@ import org.bukkit.entity.Rabbit;
 import org.bukkit.entity.Rabbit.Type;
 import org.bukkit.entity.Slime;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.metadata.FixedMetadataValue;
 
 import io.lumine.mythic.api.adapters.AbstractLocation;
 import io.lumine.mythic.bukkit.MythicBukkit;
@@ -31,18 +32,20 @@ public class Enemy_Order implements Runnable
 	public String m_MobName = "";
 	Location m_Loc;
 	public double m_WaitingTime;
+	public boolean is_NoItemDrop = false;
 	
 	Entity m_Entity = null;
 	ActiveMob m_MythicEntity = null;
 	public boolean Spawned = false;
 	double m_SpawnTime = 1.0;
-	
-	public Enemy_Order(boolean _mythic, String _name, Location _loc, double _waiting_time)
+
+	public Enemy_Order(boolean _mythic, String _name, Location _loc, double _waiting_time, boolean _is_NoItemDrop)
 	{
 		is_Mythicmob = _mythic;
 		m_MobName = _name;
 		m_Loc = _loc.clone().add(0.5, 2.0, 0.5);
 		m_WaitingTime = _waiting_time;
+		is_NoItemDrop = _is_NoItemDrop;
 	}
 	
 	double radius = 4.0;
@@ -81,6 +84,9 @@ public class Enemy_Order implements Runnable
 					Spawn_Mythic_Mob();
 				else
 					Spawn_Vanilla_Mob();
+				m_Entity.setMetadata("malaAltar.monster", new FixedMetadataValue(Mala_Altar.plugin, true));
+				if (is_NoItemDrop)
+					m_Entity.setMetadata("malaAltar.noItemDrop", new FixedMetadataValue(Mala_Altar.plugin, true));
 			}
 		}
 		

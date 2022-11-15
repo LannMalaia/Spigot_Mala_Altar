@@ -16,6 +16,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
@@ -42,6 +43,15 @@ public class AltarEvent implements Listener
 			if (Altar_Manager.Instance.Get_Altar(player) == null)
 				return;
 			player.setHealth(Math.max(0, player.getHealth() - player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue() * 0.05));
+		}
+	}
+	@EventHandler
+	public void Enemy_Team_Damage(EntityDamageByEntityEvent event)
+	{
+		if (event.getCause() == DamageCause.ENTITY_EXPLOSION)
+		{
+			if (event.getEntity().hasMetadata("malaAltar.monster"))
+				event.setCancelled(true);
 		}
 	}
 	
@@ -198,5 +208,12 @@ public class AltarEvent implements Listener
 		{
 			MMOItems_Setter.Instance.Equip(event.getMobType().getInternalName(), (LivingEntity)event.getEntity());
 		}
+	}
+
+	@EventHandler
+	public void Enemy_ItemDrop(EntityDeathEvent event)
+	{
+		if (event.getEntity().hasMetadata("malaAltar.noItemDrop"))
+			event.getDrops().clear();
 	}
 }
