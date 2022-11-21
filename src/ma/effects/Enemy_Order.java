@@ -159,6 +159,7 @@ public class Enemy_Order implements Runnable
 	public void Spawn_Mythic_Mob()
 	{
 		m_MythicEntity = MythicBukkit.inst().getMobManager().spawnMob(m_MobName, m_Loc);
+		m_Entity = m_MythicEntity.getEntity().getBukkitEntity();
 	}
 	
 	public Entity Get_Entity()
