@@ -119,9 +119,9 @@ public class Altar_Bonus
 		for (Player player : players)
 		{
 			PlayerData p_data = MMOCore.plugin.dataProvider.getDataManager().get(player);
-			p_data.giveExperience(exp_amount * 2, EXPSource.SOURCE);
-			player.sendMessage("§d§l[ 11월의 이벤트 :: 경험치 2배 ]");
-			player.sendMessage("§f§l- §a§l경험치 " + (exp_amount * 2) + " 획득");
+			p_data.giveExperience(exp_amount, EXPSource.SOURCE);
+			//player.sendMessage("§d§l[ 11월의 이벤트 :: 경험치 2배 ]");
+			player.sendMessage("§f§l- §a§l경험치 " + exp_amount + " 획득");
 		}
 	}
 	public static void Give_FullPlayer_EXP(ArrayList<Player> players, String amount)
@@ -131,14 +131,14 @@ public class Altar_Bonus
 		for (Player player : players)
 		{
 			PlayerData p_data = MMOCore.plugin.dataProvider.getDataManager().get(player);
-			p_data.giveExperience(exp_amount * 2, EXPSource.SOURCE);
-			player.sendMessage("§d§l[ 11월의 이벤트 :: 경험치 2배 ]");
-			player.sendMessage("§f§l- §a§l전원 참여 보너스 경험치 " + (exp_amount * 2) + " 획득");
+			p_data.giveExperience(exp_amount, EXPSource.SOURCE);
+			//player.sendMessage("§d§l[ 11월의 이벤트 :: 경험치 2배 ]");
+			player.sendMessage("§f§l- §a§l전원 참여 보너스 경험치 " + (exp_amount) + " 획득");
 		}
 	}
 	public static void Give_Item_Players(ArrayList<Player> players, ArrayList<String> params)
 	{
-		if (params.get(0).equals("minecraft")) // 일반 아이템 지급시
+		if (params.get(0).equalsIgnoreCase("minecraft")) // 일반 아이템 지급시
 		{
 			Material mat = Material.valueOf(params.get(1));
 			int min = 1, max = 1;
@@ -147,6 +147,11 @@ public class Altar_Bonus
 				StringTokenizer token = new StringTokenizer(params.get(2), "~");
 				min = Integer.parseInt(token.nextToken());
 				max = Integer.parseInt(token.nextToken());
+			}
+			else
+			{
+				min = Integer.parseInt(params.get(2));
+				max = Integer.parseInt(params.get(2));
 			}
 			double chance = Double.parseDouble(params.get(3).replaceAll("%", "")) * 0.01;
 			
@@ -161,7 +166,7 @@ public class Altar_Bonus
 				}
 			}
 		}
-		else if (params.get(0).equals("mmoitems")) // mmoitem 지급시
+		else if (params.get(0).equalsIgnoreCase("mmoitems")) // mmoitem 지급시
 		{
 			ItemStack item = Altar_MMOItem.Get_MMOItem(params.get(1), params.get(2));
 			int min = 1, max = 1;
@@ -170,6 +175,11 @@ public class Altar_Bonus
 				StringTokenizer token = new StringTokenizer(params.get(3), "~");
 				min = Integer.parseInt(token.nextToken());
 				max = Integer.parseInt(token.nextToken());
+			}
+			else
+			{
+				min = Integer.parseInt(params.get(3));
+				max = Integer.parseInt(params.get(3));
 			}
 			double chance = Double.parseDouble(params.get(4).replaceAll("%", "")) * 0.01;
 			for (Player player : players)

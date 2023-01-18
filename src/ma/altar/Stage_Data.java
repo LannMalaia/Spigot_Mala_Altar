@@ -22,11 +22,13 @@ public class Stage_Data
 	
 	public int m_MinPlayers = 1;
 	public int m_MaxPlayers = 3;
+	public int m_DeathCounter = 0; // »ç¸Á ÇÑ°è
 	public boolean is_NoFly = false;
 	public boolean is_NoElytra = false;
 	public boolean is_NoItem = false;
 	public boolean can_GetAdvancement = false;
 	public boolean is_SuperLevel = false;
+	public boolean is_Xmas = false;
 	public int m_PlayerNoDamageTicks = 10;
 	public int m_Need_Level = 0;
 	// public int m_Restricted_Level = 0;
@@ -111,6 +113,9 @@ public class Stage_Data
 			case "MAX_PLAYERS":
 				m_MaxPlayers = Integer.parseInt(params.get(0));
 				break;
+			case "DEATH_COUNTER":
+				m_DeathCounter = Integer.parseInt(params.get(0));
+				break;
 			case "NEED_LEVEL":
 				m_Need_Level = Integer.parseInt(params.get(0));
 				break;
@@ -128,6 +133,9 @@ public class Stage_Data
 				break;
 			case "SUPER_LEVEL":
 				is_SuperLevel = true;
+				break;
+			case "XMAS_EVENT":
+				is_Xmas = true;
 				break;
 			case "NO_DAMAGE_TICKS":
 				m_PlayerNoDamageTicks = Integer.parseInt(params.get(0));

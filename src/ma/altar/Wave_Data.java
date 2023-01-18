@@ -14,4 +14,12 @@ public class Wave_Data
 		m_SpawnOrders = _spawnorders;
 		m_Bonuses = _bonuses;
 	}
+	
+	public boolean isDeathMatchStage() {
+		for (String str : m_Gimmicks) {
+			if (str.equalsIgnoreCase("DEATHMATCH"))
+				return true;
+		}
+		return false;
+	}
 }

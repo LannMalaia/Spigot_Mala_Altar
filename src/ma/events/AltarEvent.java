@@ -1,6 +1,7 @@
 package ma.events;
 
 import org.bukkit.Bukkit;
+import org.bukkit.EntityEffect;
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
@@ -10,18 +11,29 @@ import org.bukkit.entity.Horse;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
+import org.bukkit.entity.Snowball;
 import org.bukkit.entity.Tameable;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityResurrectEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
+import org.bukkit.event.entity.EntityDamageEvent.DamageModifier;
+import org.bukkit.event.player.PlayerEggThrowEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
 import io.lumine.mythic.bukkit.events.MythicMobSpawnEvent;
 import ma.altar.Altar;
@@ -30,28 +42,80 @@ import ma.altar.Altar_Manager;
 import ma.altar.Stage_Data;
 import ma.main.Mala_Altar;
 import ma.mmoitem.MMOItems_Setter;
+import mala.mmoskill.util.Buff_Manager;
 
 public class AltarEvent implements Listener
 {
 	@EventHandler
-	public void Player_Breath_Damage(EntityDamageEvent event)
+	public void Player_Altar_Environment_Damage(EntityDamageEvent event)
 	{
-		if (event.getEntityType() == EntityType.PLAYER
-				&& event.getCause() == DamageCause.DROWNING)
-		{
+		if (event.getEntityType() == EntityType.PLAYER) {
 			Player player = (Player)event.getEntity();
-			if (Altar_Manager.Instance.Get_Altar(player) == null)
+			Altar altar = Altar_Manager.Instance.Get_Altar(player);
+			if (altar == null)
 				return;
-			player.setHealth(Math.max(0, player.getHealth() - player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue() * 0.05));
+			
+			if (event.getCause() == DamageCause.DROWNING) {
+				player.setHealth(Math.max(0, player.getHealth() - player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue() * 0.05));
+			}
+			if (event.getCause() == DamageCause.FREEZE) {
+				player.setHealth(Math.max(0, player.getHealth() - player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue() * 0.1));
+			}
+		}
+		
+	}
+
+	@EventHandler
+	public void PlayerThrowSnowball(ProjectileLaunchEvent event)
+	{
+		if (event.getEntity() instanceof Snowball) {
+			Snowball snowball = (Snowball)event.getEntity();
+			if (!(snowball.getShooter() instanceof Player))
+				return;
+			Player player = (Player)snowball.getShooter();
+			Altar altar = Altar_Manager.Instance.Get_Altar(player);
+			if (altar == null)
+				return;
+			
+			if (altar.m_CurrentStageData.is_Xmas) {
+				ItemStack item = player.getInventory().getItemInMainHand();
+				if (item.getType() == Material.SNOWBALL) {
+					item.setAmount(17);
+					player.updateInventory();
+				}
+			}
 		}
 	}
-	@EventHandler
+	
+	@EventHandler(priority = EventPriority.HIGHEST)
 	public void Enemy_Team_Damage(EntityDamageByEntityEvent event)
 	{
 		if (event.getCause() == DamageCause.ENTITY_EXPLOSION)
 		{
 			if (event.getEntity().hasMetadata("malaAltar.monster"))
 				event.setCancelled(true);
+		}
+		// ´« ´øÁö±â
+		if (event.getDamager() instanceof Snowball) {
+			Snowball snowball = (Snowball)event.getDamager();
+			if (!(snowball.getShooter() instanceof Player))
+				return;
+			Player shooter = (Player)snowball.getShooter();
+			Altar altar = Altar_Manager.Instance.Get_Altar(shooter);
+			if (altar == null)
+				return;
+			
+			if (altar.m_CurrentStageData.is_Xmas)
+				event.setDamage(4);
+		}
+		if (event.getDamager() instanceof Player) {
+			Player player = (Player)event.getDamager();
+			Altar altar = Altar_Manager.Instance.Get_Altar(player);
+			if (altar == null)
+				return;
+			
+			if (altar.m_CurrentStageData.is_Xmas)
+				event.setDamage(1);
 		}
 	}
 	
@@ -108,21 +172,39 @@ public class AltarEvent implements Listener
 		if (event.getEntity() instanceof Player)
 		{
 			Player player = (Player)event.getEntity();
+			if (player.hasMetadata("mala_altar.no_damage")) {
+				event.setCancelled(true);
+				return;
+			}
+			
 			Altar altar = Altar_Manager.Instance.Get_Altar(player);
 			if (altar != null)
 			{
-				int ndt = altar.m_CurrentStageData.m_PlayerNoDamageTicks;
-				{
-					Bukkit.getScheduler().runTaskLater(Mala_Altar.plugin,
-					new Runnable()
-					{
-						public void run()
-						{
-							if (player.getNoDamageTicks() > ndt)
-								player.setNoDamageTicks(ndt);
+				if (altar.m_CurrentStageData.is_Xmas) {
+					event.setDamage(1);
+					boolean perDamage = true;
+					if (event.getDamager() instanceof Snowball) {
+						if (((Snowball)event.getDamager()).getShooter() instanceof Player) {
+							if (!altar.m_DeathMatch)
+								perDamage = false;
 						}
-					}, 1);
+					}
+					if (perDamage) {
+						player.setHealth(Math.max(0, player.getHealth() - player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue() * 0.2));
+						player.playEffect(EntityEffect.HURT);
+					}
 				}
+				
+				int ndt = altar.m_CurrentStageData.m_PlayerNoDamageTicks;
+				Bukkit.getScheduler().runTaskLater(Mala_Altar.plugin,
+				new Runnable()
+				{
+					public void run()
+					{
+						if (player.getNoDamageTicks() > ndt)
+							player.setNoDamageTicks(ndt);
+					}
+				}, 1);
 			}
 		}
 	}
@@ -216,4 +298,5 @@ public class AltarEvent implements Listener
 		if (event.getEntity().hasMetadata("malaAltar.noItemDrop"))
 			event.getDrops().clear();
 	}
+	
 }

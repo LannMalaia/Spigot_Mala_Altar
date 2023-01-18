@@ -8,11 +8,14 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
@@ -53,14 +56,17 @@ public class Altar
 	public int m_Round = 0; // 현재 몇 번째 라운드?
 	public int m_Timer_Ticks = 0; // 남은 시간
 	public int m_TimeOut_Ticks = 3600; // 타임아웃까지 남은 시간
+	public int m_DeathCount = 0; // 부활 카운트
 	
 	boolean adv_Solo_NoInvPlay = false;
 	public Scoreboard m_HP_Board;
 	Objective obj;
 	
 	// 기믹
-	boolean m_SpawnRandomized = false;
-	boolean m_SpawnStronglyRandomized = false;
+	public boolean m_SpawnRandomized = false;
+	public boolean m_SpawnStronglyRandomized = false;
+	public boolean m_DeathMatch = false;
+	public boolean m_IncreasePerPlayer = false;
 	
 	public Altar()
 	{
@@ -169,6 +175,11 @@ public class Altar
 		m_Round = 1;
 		m_Timer_Ticks = 0;
 		adv_Solo_NoInvPlay = false;
+
+		m_SpawnRandomized = false;
+		m_SpawnStronglyRandomized = false;
+		m_DeathMatch = false;
+		m_IncreasePerPlayer = false;
 	}
 	
 	public void BroadcastMSG(String _msg)
@@ -181,6 +192,28 @@ public class Altar
 	{
 		for (Player player : m_Players)
 			player.sendTitle(_main, _sub, _fadein, _duration, _fadeout);
+	}
+	
+	public boolean Player_Resurrect(Player player) {
+		if (!player.isOnline())
+			return false;
+		if (m_DeathCount <= 0)
+			return false;
+		m_DeathCount -= 1;
+		Vector point = m_SpawnPoints.get((int)(Math.random() * m_SpawnPoints.size()));
+		Location loc = point.toLocation(Bukkit.getWorld(m_World)).add(0, 4, 0);
+		BroadcastMSG("§e[ " + player.getPlayerListName() + "§e님이 심각한 부상을 입었으나 부활했습니다. ]");
+		BroadcastMSG("§e[ " + m_DeathCount + "번의 부활 기회가 남아있습니다. ]");
+		player.setMetadata("mala_altar.no_damage", new FixedMetadataValue(Mala_Altar.plugin, true));				
+		Bukkit.getScheduler().runTaskLater(Mala_Altar.plugin, () -> {
+			player.setHealth(player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
+			player.addPotionEffect(new PotionEffect(PotionEffectType.HEALTH_BOOST, 200, 99));
+		}, 1);
+		Bukkit.getScheduler().runTaskLater(Mala_Altar.plugin, () -> {
+			player.removeMetadata("mala_altar.no_damage", Mala_Altar.plugin);
+		}, 60);
+		player.teleport(loc);
+		return true;
 	}
 	
 	public void Player_Out(Player _player)
@@ -208,27 +241,25 @@ public class Altar
 		m_CurrentStageData = _stage;
 		m_CurrentWaveData = _stage.Get_WaveData(0);
 
+		// 부활 카운트
+		m_DeathCount = m_CurrentStageData.m_DeathCounter;
+		
 		// 플레이어 취득
 		World world = Bukkit.getWorld(m_World);
-		for (Player player : world.getPlayers())
-		{
-			if (Hitbox.Entity_In_Box(player, m_Min, m_Max))
-			{
+		for (Player player : world.getPlayers()) {
+			if (Hitbox.Entity_In_Box(player, m_Min, m_Max)) {
 				if (!m_Players.contains(player))
 					m_Players.add(player);
 			}
 		}
 		m_StartPlayers.addAll(m_Players);
 		// 인원 체크
-		if (!_starter.hasPermission("*"))
-		{
-			if (m_Players.size() > m_CurrentStageData.m_MaxPlayers)
-			{
+		if (!_starter.hasPermission("*")) {
+			if (m_Players.size() > m_CurrentStageData.m_MaxPlayers) {
 				BroadcastMSG("§c최대 " + m_CurrentStageData.m_MaxPlayers + "명까지만 입장할 수 있습니다.");
 				return;
 			}
-			if (m_Players.size() < m_CurrentStageData.m_MinPlayers)
-			{
+			if (m_Players.size() < m_CurrentStageData.m_MinPlayers) {
 				BroadcastMSG("§c최소 " + m_CurrentStageData.m_MinPlayers + "명이 참여해야 입장할 수 있습니다.");
 				return;
 			}
@@ -263,21 +294,56 @@ public class Altar
 				return;
 			}
 		}
+
+		ItemStack ticket = _starter.getInventory().getItemInMainHand();
+		
+		if (m_CurrentStageData.is_Xmas) {
+			for (Player player : m_Players) {
+				if (player == _starter) {
+					for (ItemStack item : player.getInventory().getContents()) {
+						if (item == null)
+							continue;
+						if (item.getType() == Material.AIR)
+							continue;
+						if (item.isSimilar(ticket))
+							continue;
+						BroadcastMSG("§c이 제단은 인벤토리를 완전히 비워야지만 참여할 수 있습니다.");
+						BroadcastMSG("§c갑옷이나 보조장비를 지닌 플레이어가 있는지 확인해보세요.");
+						return;
+					}
+					for (ItemStack item : player.getInventory().getExtraContents()) {
+						if (item == null)
+							continue;
+						if (item.getType() == Material.AIR)
+							continue;
+						if (item.isSimilar(ticket))
+							continue;
+						BroadcastMSG("§c이 제단은 인벤토리를 완전히 비워야지만 참여할 수 있습니다.");
+						BroadcastMSG("§c갑옷이나 보조장비를 지닌 플레이어가 있는지 확인해보세요.");
+						return;
+					}
+				}
+				else if (!player.getInventory().isEmpty()) {
+					BroadcastMSG("§c이 제단은 인벤토리를 완전히 비워야지만 참여할 수 있습니다.");
+					BroadcastMSG("§c갑옷이나 보조장비를 지닌 플레이어가 있는지 확인해보세요.");
+					return;
+				}
+			}
+		}
 		
 		// 진짜 시작 처리
-		ItemStack ticket = _starter.getInventory().getItemInMainHand();
 
 		if (ticket.getAmount() > 1)
 		{
-			_starter.sendMessage("§d§l[ 11월의 이벤트 :: 통행증 소모 없음 ]");
-			// ticket.setAmount(ticket.getAmount() - 1);
-			// _starter.getInventory().setItemInMainHand(ticket);
+			//_starter.sendMessage("§d§l[ 11월의 이벤트 :: 통행증 소모 없음 ]");
+			ticket.setAmount(ticket.getAmount() - 1);
+			_starter.getInventory().setItemInMainHand(ticket);
 		}
 		else
 		{
 			// 아무것도 없는지 체크할 수 있는 유일한 구간
-			_starter.sendMessage("§d§l[ 11월의 이벤트 :: 통행증 소모 없음 ]");
-			// _starter.getInventory().setItemInMainHand(null);
+			//_starter.sendMessage("§d§l[ 11월의 이벤트 :: 통행증 소모 없음 ]");
+			_starter.getInventory().setItemInMainHand(null);
 			if (m_Players.size() == 1 && m_CurrentStageData.can_GetAdvancement)
 			{
 				adv_Solo_NoInvPlay = _starter.getInventory().isEmpty();
@@ -390,8 +456,10 @@ public class Altar
 			if (m_Players.size() == 0)
 				break;
 		}
-		for (Player player : out_list)
-			Player_Out(player);
+		for (Player player : out_list) {
+			if (!Player_Resurrect(player))
+				Player_Out(player);
+		}
 		
 		// 제단 소환몹이 제단을 벗어남
 		for (Enemy_Order order : m_Enemies)
@@ -421,10 +489,10 @@ public class Altar
 				{
 					m_CurrentWaveData = m_CurrentStageData.Get_WaveData(m_Round);
 					m_Round += 1;
-					// 몹 스폰
-					Spawn_Enemies();
 					// 기믹 스타또
 					Start_Gimmicks();
+					// 몹 스폰
+					Spawn_Enemies();
 				}
 				else
 				{
@@ -453,24 +521,13 @@ public class Altar
 	 */
 	public boolean Check_Wave_Clear()
 	{
-		// debug
-//		for (Player player : m_Players)
-//		{
-//			player.sendMessage("[ 몹 일람 (" + m_Enemies.size() + ")마리 ]");
-//			for (Enemy_Order eo : m_Enemies)
-//			{
-//				player.sendMessage(String.format("%.3f", eo.m_WaitingTime) + "초 후 - "
-//						+ eo.m_MobName + " :: "
-//						+ (eo.Spawned ? "[스폰됨] " : "[스폰안됨] ")
-//						+ (eo.Check_Entity_Dead() ? "[뒤짐]" : "[살었음]"));
-//			}
-//			player.sendMessage("--------종료");
-//		}
+		if (m_DeathMatch) {
+			return m_Players.size() <= 1;
+		}
 		for (int i = 0; i < m_Enemies.size(); i++)
 		{
 			Enemy_Order eo = m_Enemies.get(i);
-			if (eo.Check_Entity_Dead())
-			{
+			if (eo.Check_Entity_Dead()) {
 				m_Enemies.remove(eo);
 				i -= 1;
 			}
@@ -540,6 +597,8 @@ public class Altar
 
 		m_SpawnRandomized = false;
 		m_SpawnStronglyRandomized = false;
+		m_DeathMatch = false;
+		m_IncreasePerPlayer = false;
 		
 		if (gimmick_list == null || gimmick_list.size() == 0)
 			return;
@@ -589,6 +648,18 @@ public class Altar
 			case "RANDOMIZE_STRONG":
 				m_SpawnRandomized = true;
 				m_SpawnStronglyRandomized = true;
+				break;
+			case "INCREASE_PER_PLAYER":
+				m_IncreasePerPlayer = true;
+				break;
+			// 데스 매치
+			case "DEATHMATCH":
+				m_DeathMatch = true;
+				m_DeathCount = 0;
+				BroadcastMSG("§c§l[ 데스 매치 스테이지 ]");
+				BroadcastMSG("§c§l의지해오던 아군을 쓰러트려야 할 시간입니다.");
+				BroadcastMSG("§c§l한 명만 살아남을 수 있습니다. 전부 쓰러트리세요!");
+				BroadcastMSG("§c§l부활 횟수가 0이 되었습니다.");
 				break;
 			}
 		}
@@ -680,29 +751,34 @@ public class Altar
 		ArrayList<String> orders = m_CurrentWaveData.m_SpawnOrders;
 		if (orders == null)
 			return;
-		for (String order : orders)
-		{
-			StringTokenizer token_tok = new StringTokenizer(order, ":");
-			// 스폰 지점 인덱스
-			int index = Integer.parseInt(token_tok.nextToken());
-			if (m_SpawnRandomized) // 기믹으로 인한 랜덤화
-				index = Get_Randomized_Spawn_Point_Index();
-			// 대기 시간
-			double wait_time = Double.parseDouble(token_tok.nextToken());
-			// 미띡 몹 여부
-			boolean is_mythic = token_tok.nextToken().equals("mythicmobs");
-			// 몹 이름
-			String mob_name = token_tok.nextToken();
-			int count = Integer.parseInt(token_tok.nextToken());
-			for (int i = 0; i < count; i++)
+		
+		int targetLoop = m_IncreasePerPlayer ? Math.max(1, (int)m_Players.size()) : 1;
+		
+		for (int loop = 0; loop < targetLoop; loop++) {
+			for (String order : orders)
 			{
-				if (m_SpawnStronglyRandomized) // 기믹으로 인한 랜덤화(개체 단위)
+				StringTokenizer token_tok = new StringTokenizer(order, ":");
+				// 스폰 지점 인덱스
+				int index = Integer.parseInt(token_tok.nextToken());
+				if (m_SpawnRandomized) // 기믹으로 인한 랜덤화
 					index = Get_Randomized_Spawn_Point_Index();
-				Location loc = new Location(Bukkit.getWorld(m_World),
-						m_SpawnPoints.get(index).getX(), m_SpawnPoints.get(index).getY(), m_SpawnPoints.get(index).getZ());
-				Enemy_Order eo = new Enemy_Order(is_mythic, mob_name, loc, wait_time, m_CurrentStageData.is_NoItem);
-				m_Enemies.add(eo);
-				Bukkit.getScheduler().runTask(Mala_Altar.plugin, eo);
+				// 대기 시간
+				double wait_time = Double.parseDouble(token_tok.nextToken());
+				// 미띡 몹 여부
+				boolean is_mythic = token_tok.nextToken().equals("mythicmobs");
+				// 몹 이름
+				String mob_name = token_tok.nextToken();
+				int count = Integer.parseInt(token_tok.nextToken());
+				for (int i = 0; i < count; i++)
+				{
+					if (m_SpawnStronglyRandomized) // 기믹으로 인한 랜덤화(개체 단위)
+						index = Get_Randomized_Spawn_Point_Index();
+					Location loc = new Location(Bukkit.getWorld(m_World),
+							m_SpawnPoints.get(index).getX(), m_SpawnPoints.get(index).getY(), m_SpawnPoints.get(index).getZ());
+					Enemy_Order eo = new Enemy_Order(is_mythic, mob_name, loc, wait_time, m_CurrentStageData.is_NoItem);
+					m_Enemies.add(eo);
+					Bukkit.getScheduler().runTask(Mala_Altar.plugin, eo);
+				}
 			}
 		}
 	}

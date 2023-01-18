@@ -150,7 +150,8 @@ public class Enemy_Order implements Runnable
 		if (le instanceof Mob)
 		{
 			Altar altar = Altar_Manager.Instance.Get_Altar(this);
-			
+			if (altar == null)
+				return;
 			if (altar.m_Players.size() > 0)
 				((Mob)le).setTarget(altar.m_Players.get(rand.nextInt(altar.m_Players.size())));
 		}
