@@ -12,9 +12,11 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import github.scarsz.discordsrv.DiscordSRV;
 import laylia_core.main.Laylia_API;
 import ma.altar.Altar_Maker;
 import ma.altar.Altar_Manager;
+import ma.altar.PlayCountManager;
 import ma.events.AltarEvent;
 import ma.mmoitem.MMOItems_Setter;
 import ma.specialmob.Lost_Magician;
@@ -46,6 +48,7 @@ public class Mala_Altar extends JavaPlugin
 		// 매니저 돌리기
 		Bukkit.getScheduler().runTaskTimer(this, new Altar_Manager(), 100, 20);
 		new MMOItems_Setter();
+		PlayCountManager.getInstance();
 	}
 
 	@Override
@@ -61,7 +64,7 @@ public class Mala_Altar extends JavaPlugin
 		if (cmd.getName().equalsIgnoreCase("mala_altar_init"))
 		{
 			Player target;
-			if (!sender.hasPermission("*"))
+			if (!sender.isOp())
 				return false;
 			if (args.length == 0) // 타겟 없음
 			{
@@ -76,6 +79,17 @@ public class Mala_Altar extends JavaPlugin
 				target = Bukkit.getPlayer(args[0]);
 				if (target != null)
 					Altar_Manager.Instance.Player_Erase_Count(target);
+				return true;
+			}
+			return false;
+		}
+		if (cmd.getName().equalsIgnoreCase("mala_altar_initall"))
+		{
+			if (!sender.isOp())
+				return false;
+			if (args.length == 0) // 타겟 없음
+			{
+				PlayCountManager.getInstance().clearAllDatas();
 				return true;
 			}
 			return false;
@@ -149,7 +163,7 @@ public class Mala_Altar extends JavaPlugin
 			{
 				Integer count = Altar_Manager.Instance.Player_Get_Count(player);
 				if (count > 0)
-					player.sendMessage("§a[ 제단에 " + count + "/10 회 도전했습니다. ]");
+					player.sendMessage("§a[ 제단에 " + count + "/" + PlayCountManager.MAX_COUNT + " 회 도전했습니다. ]");
 				else
 					player.sendMessage("§a[ 아직 제단에 도전하지 않았습니다. ]");
 				return true;
@@ -168,7 +182,7 @@ public class Mala_Altar extends JavaPlugin
 				{
 					Integer count = Altar_Manager.Instance.Player_Get_Count(target);
 					if (count > 0)
-						player.sendMessage("§a[ " + target.getName() + "님은 제단에 " + count + "/10 회 도전했습니다. ]");
+						player.sendMessage("§a[ " + target.getName() + "님은 제단에 " + count + "/" + PlayCountManager.MAX_COUNT + " 회 도전했습니다. ]");
 					else
 						player.sendMessage("§a[ " + target.getName() + "님은 아직 제단에 도전하지 않았습니다. ]");
 					return true;

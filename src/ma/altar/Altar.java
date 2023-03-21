@@ -27,6 +27,7 @@ import ma.effects.Altar_Start_Effect;
 import ma.effects.Enemy_Order;
 import ma.main.Mala_Altar;
 import ma.util.Hitbox;
+import ma.util.WeekUtil;
 import mala.advancement.Criteria_Manager;
 import mala.advancement.managers.MalaNormal_Advancement;
 import net.Indyuce.mmocore.api.player.PlayerData;
@@ -50,6 +51,7 @@ public class Altar
 	ALTAR_STATE m_State = ALTAR_STATE.STANDBY; // 진행중?
 	public ArrayList<Player> m_StartPlayers; // 시작자들
 	public ArrayList<Player> m_Players; // 참여자들
+	public ArrayList<Player> m_NoBonusPlayers;
 	public ArrayList<Enemy_Order> m_Enemies; // 몹들
 	public Stage_Data m_CurrentStageData; // 이번 도전에서 진행되는 스테이지 데이터
 	public Wave_Data m_CurrentWaveData; // 이번 도전에서 진행되는 스폰 오더
@@ -57,7 +59,8 @@ public class Altar
 	public int m_Timer_Ticks = 0; // 남은 시간
 	public int m_TimeOut_Ticks = 3600; // 타임아웃까지 남은 시간
 	public int m_DeathCount = 0; // 부활 카운트
-	
+	boolean counted = false; // 플레이 카운트 여부
+
 	boolean adv_Solo_NoInvPlay = false;
 	public Scoreboard m_HP_Board;
 	Objective obj;
@@ -171,11 +174,13 @@ public class Altar
 		m_State = ALTAR_STATE.STANDBY;
 		m_StartPlayers = new ArrayList<Player>();
 		m_Players = new ArrayList<Player>();
+		m_NoBonusPlayers = new ArrayList<Player>();
 		m_Enemies = new ArrayList<Enemy_Order>();
 		m_Round = 1;
 		m_Timer_Ticks = 0;
 		adv_Solo_NoInvPlay = false;
-
+		counted = false;
+		
 		m_SpawnRandomized = false;
 		m_SpawnStronglyRandomized = false;
 		m_DeathMatch = false;
@@ -287,12 +292,12 @@ public class Altar
 				BroadcastMSG("§b§l" + m_CurrentStageData.m_Need_Level + "§c 레벨을 넘었는지 확인해보세요.");
 				return;
 			}
-			if (Altar_Manager.Instance.Player_Get_Count(player) >= 10)
-			{
-				BroadcastMSG("§c지나치게 많이 도전을 시도하는 플레이어가 있습니다.");
-				BroadcastMSG("§c/altar_playcount 명령어로 자신의 도전 횟수를 확인해보세요.");
-				return;
-			}
+		}
+		if (Altar_Manager.Instance.Player_Get_Count(_starter) >= PlayCountManager.MAX_COUNT)
+		{
+			BroadcastMSG("§c오늘의 도전 횟수를 전부 소모했습니다.");
+			BroadcastMSG("§c/altar_playcount 명령어로 자신의 도전 횟수를 확인해보세요.");
+			return;
 		}
 
 		ItemStack ticket = _starter.getInventory().getItemInMainHand();
@@ -333,22 +338,26 @@ public class Altar
 		
 		// 진짜 시작 처리
 
-		if (ticket.getAmount() > 1)
-		{
-			//_starter.sendMessage("§d§l[ 11월의 이벤트 :: 통행증 소모 없음 ]");
-			ticket.setAmount(ticket.getAmount() - 1);
-			_starter.getInventory().setItemInMainHand(ticket);
-		}
-		else
-		{
-			// 아무것도 없는지 체크할 수 있는 유일한 구간
-			//_starter.sendMessage("§d§l[ 11월의 이벤트 :: 통행증 소모 없음 ]");
-			_starter.getInventory().setItemInMainHand(null);
-			if (m_Players.size() == 1 && m_CurrentStageData.can_GetAdvancement)
+		if (WeekUtil.isNormalDay()) {
+			_starter.sendMessage("§d§l[ 평일 보너스 - 통행증 소모 없음 ]");
+		} else {
+			if (ticket.getAmount() > 1)
 			{
-				adv_Solo_NoInvPlay = _starter.getInventory().isEmpty();
-				if (adv_Solo_NoInvPlay)
-					_starter.sendMessage("§d§l전라로 GO!!!!");
+				//_starter.sendMessage("§d§l[ 11월의 이벤트 :: 통행증 소모 없음 ]");
+				ticket.setAmount(ticket.getAmount() - 1);
+				_starter.getInventory().setItemInMainHand(ticket);
+			}
+			else
+			{
+				// 아무것도 없는지 체크할 수 있는 유일한 구간
+				//_starter.sendMessage("§d§l[ 11월의 이벤트 :: 통행증 소모 없음 ]");
+				_starter.getInventory().setItemInMainHand(null);
+				if (m_Players.size() == 1 && m_CurrentStageData.can_GetAdvancement)
+				{
+					adv_Solo_NoInvPlay = _starter.getInventory().isEmpty();
+					if (adv_Solo_NoInvPlay)
+						_starter.sendMessage("§d§l전라로 GO!!!!");
+				}
 			}
 		}
 		
@@ -357,12 +366,11 @@ public class Altar
 		{
 			if (player != _starter)
 				player.teleport(_starter.getLocation(), TeleportCause.PLUGIN);
-
+			if (PlayCountManager.getInstance().getPlayerCount(player) >= PlayCountManager.MAX_COUNT) {
+				m_NoBonusPlayers.add(player);
+				player.sendMessage("§c[ 이번 도전에서 보상을 받을 수 없습니다. (도전 횟수 과다) ]");
+			}
 			player.setScoreboard(m_HP_Board);
-			if (m_CurrentStageData.is_SuperLevel)
-				Altar_Manager.Instance.Player_Count_Up(player, 4);
-			else
-				Altar_Manager.Instance.Player_Count_Up(player, 1);
 		}
 		for (Player player : m_Players)
 		{
@@ -405,6 +413,19 @@ public class Altar
 		}
 		
 		Spawn_Enemies();
+	}
+	
+	public void AddPlaycount() {
+		if (!counted) {
+			counted = true;
+			for (Player player : m_Players) {
+				if (m_CurrentStageData.is_SuperLevel)
+					Altar_Manager.Instance.Player_Count_Up(player, PlayCountManager.SUPERLEVEL_PLAYCOUNT);
+				else
+					Altar_Manager.Instance.Player_Count_Up(player, 1);
+				player.sendMessage("§e플레이 횟수가 기록되었습니다. (" + Altar_Manager.Instance.Player_Get_Count(player) + "/" + PlayCountManager.MAX_COUNT + ")");
+			}
+		}
 	}
 	
 	/**
@@ -483,6 +504,12 @@ public class Altar
 			if (Check_Wave_Clear()) // 다 깼냐?
 			{
 				// 보너스 지급
+				if (WeekUtil.isSaturday()) {
+					if (Math.random() <= 0.3) {
+						BroadcastMSG("§d§l[ 토요일 보너스 - 30% 확률로 보상 두 배 ]");
+						Give_Bonuses();
+					}
+				}
 				Give_Bonuses();
 				// 더 남았냐?
 				if (m_Round < m_CurrentStageData.m_Waves.size())
@@ -545,12 +572,28 @@ public class Altar
 	public void Give_Bonuses()
 	{
 		ArrayList<String> bonus_list = m_CurrentWaveData.m_Bonuses;
-
+		double expMultiplier = 1.0;
+		boolean bonusGiven = false;
+		
 		if (bonus_list == null || bonus_list.size() == 0)
 			return;
 			
 		// 클리어 보너스 주기
 		BroadcastMSG("§f§l[ §b§l클리어 보너스 §f§l]");
+		if (WeekUtil.isSunday()) {
+			BroadcastMSG("§d§l[ 일요일 보너스 - 경험치 두 배 ]");
+			expMultiplier = 2.0;
+		}
+		if (m_Players.size() == 1) {
+			BroadcastMSG("§c§l[ 솔로 플레이 제약 - 경험치 30% 감소 ]");
+			expMultiplier *= 0.7;
+		}
+		
+		ArrayList<Player> bonusPlayers = new ArrayList<Player>(m_Players);
+		for (Player player : m_NoBonusPlayers) {
+			player.sendMessage("§c§l[ 플레이 횟수 한계 - 보상 X ]");
+			bonusPlayers.remove(player);
+		}
 		
 		for (String bonus : bonus_list)
 		{
@@ -576,17 +619,25 @@ public class Altar
 				break;
 			// EXP 획득
 			case "GAIN_EXP":
-				Altar_Bonus.Give_EXP_Players(m_Players, params.get(0));
+				bonusGiven = true;
+				Altar_Bonus.Give_EXP_Players(bonusPlayers, params.get(0), expMultiplier);
 				break;
-				// EXP 획득
+			// EXP 획득
 			case "FULL_PLAYER_EXP":
+				bonusGiven = true;
 				if (m_Players.size() == m_CurrentStageData.m_MaxPlayers)
-					Altar_Bonus.Give_FullPlayer_EXP(m_Players, params.get(0));
+					Altar_Bonus.Give_FullPlayer_EXP(bonusPlayers, params.get(0), expMultiplier);
 				break;
 			// 아이템 취득
 			case "GAIN_ITEM":
-				Altar_Bonus.Give_Item_Players(m_Players, params);
+				bonusGiven = true;
+				Altar_Bonus.Give_Item_Players(bonusPlayers, params);
 				break;
+			}
+			
+			// 보상이 주어졌는데 플레이카운트 적립이 안됐다면 적립하기
+			if (bonusGiven && !counted) {
+				AddPlaycount();
 			}
 		}
 	}

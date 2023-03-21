@@ -21,13 +21,10 @@ public class Altar_Manager implements Runnable
 	public ArrayList<Altar> m_AltarList;
 	public ArrayList<Altar_Maker> m_MakerList;
 	
-	public HashMap<UUID, Integer> m_User_PlayCount;
-	
 	public Altar_Manager()
 	{
 		m_AltarList = new ArrayList<Altar>();
 		m_MakerList = new ArrayList<Altar_Maker>();
-		m_User_PlayCount = new HashMap<UUID, Integer>();
 		Instance = this;
 		
 		Read_Altar_List();
@@ -118,34 +115,21 @@ public class Altar_Manager implements Runnable
 
 	public Integer Player_Get_Count(Player _player)
 	{
-		Integer count = 0;
-		if (m_User_PlayCount.containsKey(_player.getUniqueId()))
-			count = m_User_PlayCount.get(_player.getUniqueId());
-		return count;
+		return PlayCountManager.getInstance().getPlayerCount(_player);
 	}
 	public void Player_Count_Up(Player _player, int _count)
 	{
-		if (_player.hasPermission("*"))
-			return;
-		
-		if (m_User_PlayCount.containsKey(_player.getUniqueId()))
-		{
-			Integer count = m_User_PlayCount.get(_player.getUniqueId());
-			m_User_PlayCount.put(_player.getUniqueId(), count + _count);
-		}
-		else
-		{
-			m_User_PlayCount.put(_player.getUniqueId(), _count);
-		}
+		PlayCountManager.getInstance().addPlayerCount(_player, _count);
 	}
 	public void Player_Erase_Count(Player _player)
 	{
-		_player.sendMessage("§b[ 제단 수행 카운트가 초기화되었습니다. ]");
-		
-		if (_player.hasPermission("*"))
+		if (!_player.isOp()) {
+			_player.sendMessage("§c[ 권한이 없습니다. ]");
 			return;
-		if (m_User_PlayCount.containsKey(_player.getUniqueId()))
-			m_User_PlayCount.remove(_player.getUniqueId());
+		}
+
+		_player.sendMessage("§b[ 제단 플레이 횟수가 초기화되었습니다. ]");
+		PlayCountManager.getInstance().removePlayerCount(_player);
 	}
 	
 	// 제단 취득
